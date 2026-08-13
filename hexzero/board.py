@@ -48,6 +48,11 @@ class HexBoard:
         return row * self.board_size + col
 
 
+    def cell_to_index(self, cell: int) -> tuple:
+        return (cell // self.board_size, cell % self.board_size)
+
+
+
     def valid_choices(self) -> np.ndarray:
         return np.flatnonzero(self.board == 0)
     
@@ -62,7 +67,7 @@ class HexBoard:
         else:
             if self.ufds_black.related(self.east_cell, self.west_cell):
                 self.winner = -1
-    
+
 
     def is_in_bounds(self, row: int, col: int) -> bool:
         return row >= 0 and col >= 0 and row < self.board_size and col < self.board_size
