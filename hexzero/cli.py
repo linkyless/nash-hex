@@ -1,31 +1,28 @@
 from hexzero.board import HexBoard
 from hexzero.mcts import MCTS
+import random
 
 if __name__ == "__main__":
 
     board_size = 5
-    Engine = HexBoard(board_size)
+    
+    zero_wins = 0
+    for iteration in range(300):
+        Engine = HexBoard(board_size)
+        while Engine.winner is None:
+            if Engine.current_player() == -1:
+                MonteCarlo = MCTS(Engine, 500)
+                (row, col) = Engine.index_to_cell(MonteCarlo.search())
+                Engine.place(row, col)
 
-    while Engine.winner is None:
-        if Engine.current_player() == -1:
-            MonteCarlo = MCTS(Engine, 500)
-            (row, col) = Engine.index_to_cell(MonteCarlo.search())
-            Engine.place(row, col)
+            else:
+                print(f"Iteracion: {iteration}")
+                (row, col) = Engine.index_to_cell(random.choice(list(Engine.valid_choices())))
+                Engine.place(row, col)
 
-        else:
-            Engine.print_board()
-            x, y = map(int, input("Selecciona coordenadas x e y: ").split())
-            while not Engine.is_valid_play(x - 1, y - 1):
-                x, y = map(int, input("No funciona. Selecciona coordenadas x e y: ").split())
-            
-            row = x - 1
-            col = y - 1
-
-            Engine.place(row, col)
+        if Engine.winner == -1:
+            zero_wins += 1
         
-
-    Engine.print_board()
-    Engine.print_winner()
 
 
 
