@@ -48,9 +48,8 @@ class HexBoard:
         return row * self.board_size + col
 
 
-    def cell_to_index(self, cell: int) -> tuple:
+    def index_to_cell(self, cell: int) -> tuple:
         return (cell // self.board_size, cell % self.board_size)
-
 
 
     def valid_choices(self) -> np.ndarray:
@@ -107,6 +106,8 @@ class HexBoard:
             if col == self.board_size - 1:
                 self.ufds_black.join(current_cell, self.east_cell)
 
+    # finished with winner = 1
+    # backup current_player * -1
 
     def place(self, row: int, col: int):
         player = self.current_player()

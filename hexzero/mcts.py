@@ -2,6 +2,7 @@ from __future__ import annotations
 from hexzero.board import HexBoard
 import math
 import copy
+import random
 
 C_PARAM = math.sqrt(2)
 
@@ -37,12 +38,26 @@ class MCTS:
 
         
     def search(self) -> int:
-        for simulation in range(self.simulations):
-            next_node = self._selection()
+        for _ in range(self.simulations):
+            next_node   = self._selection()
+            next_node   = self._expansion(next_node)
+            curr_winner = self._rollout(next_node)
+            self._backup(next_node, curr_winner)
+
+        return max(self.root.children, key=lambda child: child.visits).move
 
 
     def _find_best_child(self, node: Node) -> Node:
         return max(node.children, key=lambda child: child.calculate_ucb1())
+
+
+    def _sum_backup_points_to_node(self, node: Node, winner: int) -> None:
+        if -node.board.current_player() == winner:
+            node.value_sum += 1
+        else:
+            node.value_sum -= 1
+
+        node.visits += 1
     
 
     def _selection(self) -> Node:
@@ -57,7 +72,7 @@ class MCTS:
             return node
         
         next_move  = node.untried_moves.pop()
-        (row, col) = node.board.cell_to_index(next_move)
+        (row, col) = node.board.index_to_cell(next_move)
         new_board  = copy.deepcopy(node.board)
 
         new_board.place(row, col)
@@ -65,6 +80,26 @@ class MCTS:
         new_node = Node(new_board, next_move, node)
         node.children.append(new_node)
         return new_node
+
+
+    def _rollout(self, node: Node) -> int:
+        curr_board = copy.deepcopy(node.board)
+        while curr_board.winner is None:
+            choices    = curr_board.valid_choices()
+            choice     = int(random.choice(choices))
+            (row, col) = curr_board.index_to_cell(choice)
+            curr_board.place(row, col)
+
+        return curr_board.winner
+
+    def _backup(self, node: Node, winner: int) -> None:
+        # root.value_sum is nothing
+        self._sum_backup_points_to_node(node, winner)
+        while node.parent is not None:
+            node = node.parent
+            self._sum_backup_points_to_node(node, winner)
+
+
 
     
 
