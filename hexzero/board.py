@@ -1,5 +1,6 @@
 import numpy as np
 from hexzero.ufds import UFDS
+import copy
 
 class HexBoard:
     
@@ -25,6 +26,15 @@ class HexBoard:
             return 1
         else:
             return -1
+
+
+    def transform_to_canonic_form(self) -> np.ndarray:
+        new_board = copy.copy(self.board)
+
+        if self.current_player() == -1:
+            new_board = (-new_board).T
+
+        return new_board
 
 
     def print_winner(self) -> None:
