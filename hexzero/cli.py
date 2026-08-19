@@ -1,6 +1,8 @@
 from hexzero.board import HexBoard
 from hexzero.mcts import MCTS
 import random
+import torch
+from hexzero.network import PolicyValueNetwork 
 
 if __name__ == "__main__":
 
