@@ -1,9 +1,8 @@
+from __future__ import annotations
 import numpy as np
 from hexzero.ufds import UFDS
-import copy
 
 class HexBoard:
-    
     def __init__(self, board_size: int):
         self.board_size = board_size
         self.board      = np.zeros((self.board_size, self.board_size), dtype=int)
@@ -29,7 +28,7 @@ class HexBoard:
 
 
     def transform_to_canonic_form(self) -> np.ndarray:
-        new_board = copy.copy(self.board)
+        new_board = self.board.copy()
 
         if self.current_player() == -1:
             new_board = (-new_board).T
@@ -127,4 +126,13 @@ class HexBoard:
 
         self.turn += 1
 
+
+    def copy(self) -> HexBoard:
+        new_board = HexBoard(self.board_size)
+        new_board.board = self.board.copy()
+        new_board.ufds_white = self.ufds_white.copy()
+        new_board.ufds_black = self.ufds_black.copy()
+        new_board.turn = self.turn
+        new_board.winner = self.winner
+        return new_board
 

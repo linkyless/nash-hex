@@ -1,4 +1,6 @@
+from __future__ import annotations
 import numpy as np
+
 
 class UFDS: 
     def __init__(self, N: int):
@@ -31,4 +33,11 @@ class UFDS:
         self.parent[root_first_cell]  = root_second_cell
 
         self.num_sets = self.num_sets - 1
+
+
+    def copy(self) -> UFDS:
+        new_ufds = UFDS(len(self.parent))
+        new_ufds.parent = self.parent.copy()
+        new_ufds.num_sets = self.num_sets
+        return new_ufds
 
