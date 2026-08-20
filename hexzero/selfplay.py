@@ -17,8 +17,13 @@ def get_examples_of_a_match(board_size: int, network: PolicyValueNetwork, simula
     while Engine.winner is None:
         MonteCarlo = MCTS(Engine, simulations, network)
         (pi, best_move) = MonteCarlo.search()
-        
-        examples.append((Engine.transform_to_canonic_form(), pi))
+
+        black_moves = Engine.current_player() == -1
+        temp_pi = pi
+        if black_moves:
+            temp_pi = pi.reshape(Engine.board_size, Engine.board_size).T.reshape(-1)
+
+        examples.append((Engine.transform_to_canonic_form(), temp_pi))
 
         best_move = best_move if count > TEMPERATURE_MOVES else int(np.random.choice(total_cells, p=pi))
 

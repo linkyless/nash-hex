@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from hexzero.network import PolicyValueNetwork
 
-C_PARAM = math.sqrt(2)
+C_PARAM = 1.0
 
 class Node:
     def __init__(self, board: HexBoard, prior: float = None, move: int = None, parent: Node = None):
@@ -89,8 +89,8 @@ class MCTS:
     def _expansion(self, node: Node) -> float:
         if node.board.winner is not None:
             return 1
-        
         total_cells = node.board.board_size * node.board.board_size
+        black_moves = (node.board.current_player() == -1)
         curr_board = node.board.transform_to_canonic_form()
 
         tensor = torch.from_numpy(curr_board).reshape(1, 1, node.board.board_size, node.board.board_size).float()
@@ -98,6 +98,9 @@ class MCTS:
         with torch.no_grad():
             policy_logits, value = self.network(tensor)
             policy_logits = policy_logits.squeeze(0)
+
+        if black_moves:
+            policy_logits = policy_logits.reshape(node.board.board_size, node.board.board_size).T.reshape(-1)
 
         valid = torch.zeros(total_cells, dtype=torch.bool)
         choices = node.board.valid_choices()
