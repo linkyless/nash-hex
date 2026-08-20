@@ -50,23 +50,23 @@ class MCTS:
             value       = self._expansion(next_node)
             self._backup(next_node, value)
 
-        return (self._get_π(), max(self.root.children, key=lambda child: child.visits).move)
+        return (self._get_pi(), max(self.root.children, key=lambda child: child.visits).move)
 
 
     def _find_best_child(self, node: Node) -> Node:
         return max(node.children, key=lambda child: child.calculate_puct())
 
 
-    def _get_π(self) -> np.ndarray:
+    def _get_pi(self) -> np.ndarray:
         total_visits = sum(node.visits for node in self.root.children)
     #   total_visits = self.root.visits - 1
 
-        π = np.zeros(self.root.board.board_size * self.root.board.board_size)
+        pi = np.zeros(self.root.board.board_size * self.root.board.board_size)
 
         for child in self.root.children:
-            π[child.move] = child.visits
+            pi[child.move] = child.visits
         
-        return π / total_visits
+        return pi / total_visits
 
 
     def _sum_backup_points_to_node(self, node: Node, value: float, level: int) -> None:
@@ -109,7 +109,7 @@ class MCTS:
 
         for choice in choices:
             [row, col] = node.board.index_to_cell(choice)
-            new_board  = copy.deepcopy(node.board)
+            new_board  = node.board.copy()
             new_board.place(row, col)
             new_node = Node(new_board, policy[choice].item(), choice, node)
             node.children.append(new_node)
@@ -125,8 +125,3 @@ class MCTS:
             node = node.parent
             level += 1
             self._sum_backup_points_to_node(node, value, level)
-
-
-
-    
-
