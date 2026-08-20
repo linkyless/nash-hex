@@ -8,9 +8,9 @@ from hexzero.visualize import show_opening
 
 
 BOARD_SIZE    = 5
-ITERATIONS    = 1
-MATCHES       = 5
-SIMULATIONS   = 100
+ITERATIONS    = 30
+MATCHES       = 50
+SIMULATIONS   = 200
 EPOCHS        = 5
 LEARNING_RATE = 0.001
 
