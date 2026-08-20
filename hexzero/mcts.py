@@ -44,17 +44,29 @@ class MCTS:
         self.network     = network
 
 
-    def search(self) -> int:
+    def search(self) -> tuple[np.ndarray, int]:
         for _ in range(self.simulations):
             next_node   = self._selection()
             value       = self._expansion(next_node)
             self._backup(next_node, value)
 
-        return max(self.root.children, key=lambda child: child.visits).move
+        return (self._get_π(), max(self.root.children, key=lambda child: child.visits).move)
 
 
     def _find_best_child(self, node: Node) -> Node:
         return max(node.children, key=lambda child: child.calculate_puct())
+
+
+    def _get_π(self) -> np.ndarray:
+        total_visits = sum(node.visits for node in self.root.children)
+    #   total_visits = self.root.visits - 1
+
+        π = np.zeros(self.root.board.board_size * self.root.board.board_size)
+
+        for child in self.root.children:
+            π[child.move] = child.visits
+        
+        return π / total_visits
 
 
     def _sum_backup_points_to_node(self, node: Node, value: float, level: int) -> None:
