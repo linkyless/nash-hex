@@ -78,7 +78,6 @@ class MCTS:
 
 
     def _expansion(self, node: Node) -> float:
-        # 1. Si es terminal, quien movió para llegar aquí ganó la partida -> +1.0
         if node.board.winner is not None:
             return 1.0
             
