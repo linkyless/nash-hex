@@ -69,15 +69,6 @@ class MCTS:
         return pi / total_visits
 
 
-    def _sum_backup_points_to_node(self, node: Node, value: float, level: int) -> None:
-        if level % 2 == 0:
-            node.value_sum += value
-        else:
-            node.value_sum -= value
-
-        node.visits += 1
-    
-
     def _selection(self) -> Node:
         curr_node  = self.root
         while curr_node.board.winner is None and len(curr_node.children) > 0:
@@ -87,8 +78,10 @@ class MCTS:
 
 
     def _expansion(self, node: Node) -> float:
+        # 1. Si es terminal, quien movió para llegar aquí ganó la partida -> +1.0
         if node.board.winner is not None:
-            return 1
+            return 1.0
+            
         total_cells = node.board.board_size * node.board.board_size
         black_moves = (node.board.current_player() == -1)
         curr_board = node.board.transform_to_canonic_form()
@@ -108,23 +101,24 @@ class MCTS:
 
         policy_logits[~valid] = -torch.inf
         policy = torch.softmax(policy_logits, dim=0)
-        value = value.item()
+        
+        value_scalar = -value.item()
 
         for choice in choices:
-            [row, col] = node.board.index_to_cell(choice)
-            new_board  = node.board.copy()
+            row, col = node.board.index_to_cell(choice)
+            new_board = node.board.copy()
             new_board.place(row, col)
-            new_node = Node(new_board, policy[choice].item(), choice, node)
+            new_node = Node(board=new_board, prior=policy[choice].item(), move=choice, parent=node)
             node.children.append(new_node)
 
-        return value
+        return value_scalar
 
 
     def _backup(self, node: Node, value: float) -> None:
-        # root.value_sum is nothing
-        level = 0
-        self._sum_backup_points_to_node(node, value, level)
-        while node.parent is not None:
-            node = node.parent
-            level += 1
-            self._sum_backup_points_to_node(node, value, level)
+        curr = node
+        v = value
+        while curr is not None:
+            curr.visits += 1
+            curr.value_sum += v
+            v = -v
+            curr = curr.parent
