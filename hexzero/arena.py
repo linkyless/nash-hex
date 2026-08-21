@@ -5,13 +5,13 @@ import numpy as np
 
 HOW_MANY_INITIAL_RANDOM_MOVES = 2
 
-def get_win_rate(network1: PolicyValueNetwork, network2: PolicyValueNetwork, board_size: int, simulations: int, number_of_openings: int) -> tuple[float, float]:
+def get_win_rate(network1: PolicyValueNetwork, network2: PolicyValueNetwork, board_size: int, simulations: int, number_of_matches: int) -> tuple[float, float]:
  
     network1_wins = 0
     network2_wins = 0
     total_matches = 0
  
-    for _ in range(number_of_openings):
+    for _ in range(number_of_matches):
         # generate a random opening and store it for reuse.
         opening = []
         temp_board = HexBoard(board_size)
@@ -50,5 +50,7 @@ def get_win_rate(network1: PolicyValueNetwork, network2: PolicyValueNetwork, boa
  
             total_matches += 1
             print(moves)
+            print(f"WINS1: {network1_wins}, WINS2: {network2_wins}")
+            Board.print_board()
  
     return (network1_wins / total_matches, network2_wins / total_matches)

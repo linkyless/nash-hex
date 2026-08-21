@@ -1,23 +1,36 @@
+from hexzero.network import PolicyValueNetwork
+from hexzero.mcts import MCTS
 from hexzero.board import HexBoard
+import numpy as np
+import random
  
  
 if __name__ == "__main__":
  
     board_size = 5
-    Engine = HexBoard(board_size)
- 
-    while Engine.winner is None:
- 
+    
+    network = PolicyValueNetwork(board_size)
+    zero_wins = 0
+    matches = 50
+    for _ in range(matches):
+        Engine = HexBoard(board_size)
+        while Engine.winner is None:
+
+            Engine.print_board()
+            player = Engine.current_player()       
+            if player == 1: 
+                (row, col) = Engine.index_to_cell(random.choice(Engine.valid_choices()))
+                Engine.place(row, col)
+            else:
+                mcts = MCTS(Engine, 400, network)
+                (_, move) = mcts.search()
+                (row, col) = Engine.index_to_cell(move)
+                Engine.place(row, col)
+
+        zero_won = (Engine.winner == -1)
+        zero_wins += zero_won
         Engine.print_board()
- 
-        x, y = map(int, input("Selecciona coordenadas x e y: ").split())
-        while not Engine.is_valid_play(x - 1, y - 1):
-            x, y = map(int, input("No funciona. Selecciona coordenadas x e y: ").split())
- 
-        row = x - 1
-        col = y - 1
- 
-        Engine.place(row, col)
- 
-    Engine.print_board()
-    Engine.print_winner()
+        Engine.print_winner()
+
+    print(f"Win-rate: {zero_wins / matches}")
+
