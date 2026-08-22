@@ -14,7 +14,8 @@ env/
 *.pt
 *.pth
 *.onnx
-checkpoints/
+checkpoints/*
+!checkpoints/iter_29.pt
 data/
 runs/
 logs/
