@@ -1,0 +1,5 @@
+label,win_rate,games
+untrained network,0.50,100
+trained with the transposition bug,0.40,100
+transposition fixed value still inverted,0.43,100
+both fixed 29 iterations,0.97,100
