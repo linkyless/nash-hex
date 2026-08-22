@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nash</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<main class="shell">
+
+  <header class="masthead">
+    <h1 class="wordmark">NASH</h1>
+    <p class="creed">it learned hex by playing itself</p>
+  </header>
+
+  <section class="stage">
+    <canvas id="board" width="144" height="98" aria-label="Hex board"></canvas>
+  </section>
+
+  <section class="readout">
+    <div class="gauge">
+      <span class="gauge-name" id="gaugeYou">you</span>
+      <div class="gauge-track" id="gauge" aria-hidden="true"></div>
+      <span class="gauge-name" id="gaugeNash">nash</span>
+    </div>
+    <p class="verdict" id="verdict">your move</p>
+  </section>
+
+  <section class="panel">
+    <div class="switch">
+      <span class="switch-name">overlay</span>
+      <div class="switch-set" role="group" aria-label="Overlay">
+        <button type="button" class="key is-live" data-overlay="off">off</button>
+        <button type="button" class="key" data-overlay="search">search</button>
+        <button type="button" class="key" data-overlay="instinct">instinct</button>
+      </div>
+    </div>
+    <p class="gloss" id="gloss"></p>
+
+    <details class="drawer">
+      <summary class="drawer-tab">settings</summary>
+      <div class="drawer-body">
+        <label class="field">
+          <span class="field-name">simulations</span>
+          <input type="range" id="sims" min="25" max="800" step="25" value="300">
+          <output class="field-value" id="simsValue">300</output>
+        </label>
+        <label class="field field-check">
+          <input type="checkbox" id="first" checked>
+          <span class="field-name">you move first</span>
+        </label>
+        <button type="button" class="key key-wide" id="restart">new game</button>
+      </div>
+    </details>
+  </section>
+
+  <footer class="colophon">
+    <p>hex cannot end in a draw. whoever moves first can always force a win, so nash is strongest when it opens.</p>
+  </footer>
+
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
