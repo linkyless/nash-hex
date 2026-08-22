@@ -1,6 +1,6 @@
 from hexzero.board import HexBoard
 from hexzero.mcts import MCTS
-
+from hexzero.network import PolicyValueNetwork
 
 def test_finds_winning_move():
     """
@@ -32,5 +32,6 @@ def test_finds_winning_move():
     assert board.winner is None
     assert board.current_player() == 1
 
-    mcts = MCTS(board, 500)
+    network = PolicyValueNetwork(5)
+    mcts = MCTS(board, 500, network)
     assert mcts.search() == 20
