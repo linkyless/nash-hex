@@ -78,6 +78,7 @@ const simsInput = document.getElementById("sims");
 const simsValue = document.getElementById("simsValue");
 const firstInput = document.getElementById("first");
 const restart    = document.getElementById("restart");
+const again      = document.getElementById("again");
 
 const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const lookup = new Int16Array(canvas.width * canvas.height).fill(-1);
@@ -232,10 +233,12 @@ function paintStatus() {
     verdict.textContent = state.winner === state.human ? "you won" : "nash won";
     verdict.classList.add("is-win");
     canvas.classList.add("is-idle");
+    again.classList.remove("is-hidden");
     return;
   }
 
   canvas.classList.remove("is-idle");
+  again.classList.add("is-hidden");
 
   if (busy) {
     verdict.textContent = "nash is thinking";
@@ -366,6 +369,7 @@ document.querySelectorAll("[data-sound]").forEach((key) => {
 });
 
 restart.addEventListener("click", newGame);
+again.addEventListener("click", newGame);
 firstInput.addEventListener("change", newGame);
 
 ctx.imageSmoothingEnabled = false;

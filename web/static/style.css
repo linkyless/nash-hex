@@ -205,6 +205,10 @@ body {
   outline-offset: 2px;
 }
 
+.is-hidden {
+  display: none;
+}
+
 .key-wide {
   width: 100%;
   padding: 10px;
