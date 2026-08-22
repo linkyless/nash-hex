@@ -3,13 +3,15 @@
 [![Python](https://img.shields.io/badge/Python-3.13-1a1a1a?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.x-1a1a1a?style=for-the-badge&logo=pytorch&logoColor=white)](https://pytorch.org/)
 
+
+
 # nash
 
 Nash plays Hex on a 5x5 board and it beats its own first iteration 97 games out of 100. Nobody taught it anything about the game beyond the rules, so there was no opening book for it to memorise and no evaluation function that I wrote by hand telling it which positions are good. It started from random weights, played fifteen hundred games against itself, and everything it knows came out of that. You can play against it [here](#).
 
 The algorithm is AlphaZero, scaled down until it runs on a laptop. There are in fact two pieces doing the work. One of them is a Monte Carlo tree search (MCTS), which is what actually chooses the move, by walking down the game tree and keeping count of what it finds. Now that's kind of cool, but the other is a convolutional network with two outputs. One of them guessing who is ahead and the other guessing where to play, which is nice, and the search consults it every time it reaches a position it has not seen before. The reason any of this bootstraps from nothing is that the search always plays better than the network steering it, so the search can be used as a professor for the network, and a network that has learned from a better professor then makes the next search better still.
 
-![the board](assets/board.png)
+![the board](assets/board.gif)
 
 ## the board and the network
 
