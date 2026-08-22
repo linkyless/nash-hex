@@ -21,6 +21,45 @@ const BRASS     = "#c9a227";
 const HEAT_TOP  = [122, 102, 52];
 const HEAT_LOW  = [38, 34, 25];
 
+const TONE_YOU  = 392;
+const TONE_NASH = 261;
+const TONE_END  = 523;
+
+let audio = null;
+let muted = false;
+
+function wake() {
+  if (muted) return;
+  if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+  if (audio.state === "suspended") audio.resume();
+}
+
+function blip(frequency, seconds, gain) {
+  if (muted || !audio) return;
+
+  const now = audio.currentTime;
+  const osc = audio.createOscillator();
+  const amp = audio.createGain();
+
+  osc.type = "square";
+  osc.frequency.setValueAtTime(frequency, now);
+
+  amp.gain.setValueAtTime(0, now);
+  amp.gain.linearRampToValueAtTime(gain, now + 0.008);
+  amp.gain.exponentialRampToValueAtTime(0.0001, now + seconds);
+
+  osc.connect(amp).connect(audio.destination);
+  osc.start(now);
+  osc.stop(now + seconds);
+}
+
+function chime(won) {
+  const steps = won ? [0, 4, 7] : [7, 3, 0];
+  steps.forEach((step, i) => {
+    setTimeout(() => blip(TONE_END * Math.pow(2, step / 12), 0.16, 0.05), i * 90);
+  });
+}
+
 const STONE_X = 3;
 const STONE_Y = 4;
 const STONE = [
@@ -255,6 +294,9 @@ async function send(move) {
     const landed = next.nash_move;
     state = next;
 
+    if (landed !== null) blip(TONE_NASH, 0.07, 0.06);
+    if (next.winner !== null) setTimeout(() => chime(next.winner === next.human), 160);
+
     if (landed !== null && !calm) {
       popCell = landed;
       busy = false;
@@ -294,6 +336,8 @@ canvas.addEventListener("click", (event) => {
   const index = lookup[y * canvas.width + x];
   if (index < 0 || state.grid[index] !== 0) return;
 
+  wake();
+  blip(TONE_YOU, 0.06, 0.05);
   send(index);
 });
 
@@ -309,6 +353,16 @@ document.querySelectorAll("[data-overlay]").forEach((key) => {
 
 simsInput.addEventListener("input", () => {
   simsValue.textContent = simsInput.value;
+});
+
+document.querySelectorAll("[data-sound]").forEach((key) => {
+  key.addEventListener("click", () => {
+    muted = key.dataset.sound === "off";
+    if (!muted) wake();
+    document.querySelectorAll("[data-sound]").forEach((other) => {
+      other.classList.toggle("is-live", other === key);
+    });
+  });
 });
 
 restart.addEventListener("click", newGame);
