@@ -4,8 +4,8 @@ import torch
 import numpy as np
 import math
 
-NUMBER_OF_MATCHES = 100
-SIMULATIONS       = 200
+NUMBER_OF_MATCHES = 25
+SIMULATIONS       = 500
 NUMBER_OF_NETS    = 30
 STEP              = 5
 
@@ -19,10 +19,10 @@ def compare_networks(board_size: int) -> None:
     net1.eval()
 
     net2 = PolicyValueNetwork(5)
-    net2.load_state_dict(torch.load("checkpoints/iter_0.pt"))
+    net2.load_state_dict(torch.load("checkpoints/iter_29.pt"))
     net2.eval()
 
-    (win_rate_NET1, win_rate_NET2) = get_win_rate(net1, net2, board_size, SIMULATIONS, NUMBER_OF_MATCHES)
+    (win_rate_NET1, win_rate_NET2) = get_win_rate(net1, net2, board_size, SIMULATIONS, NUMBER_OF_MATCHES, mix1=0.4, mix2=0.0)
 
     print(f"Win-rate network 1: {win_rate_NET1}")
     print(f"Win-rate network 2: {win_rate_NET2}")
@@ -54,4 +54,5 @@ def free_for_all(board_size: int) -> None:
     print(elo_ratings)
 
 if __name__ == "__main__":
-    free_for_all(5)
+    compare_networks(5)
+
