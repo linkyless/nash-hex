@@ -7,7 +7,7 @@ import numpy as np
 import random
 
 
-TEMPERATURE_MOVES = 8
+TEMPERATURE_MOVES = 14
 
 def get_examples_of_a_match(board_size: int, network: PolicyValueNetwork, simulations: int) -> list[tuple[np.ndarray, np.ndarray, float]]:
     examples = []
