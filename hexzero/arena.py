@@ -2,10 +2,12 @@ from hexzero.network import PolicyValueNetwork
 from hexzero.mcts import MCTS
 from hexzero.board import HexBoard
 import numpy as np
+from hexzero.mcts import MCTS, ROOT_MIX
 
 HOW_MANY_INITIAL_RANDOM_MOVES = 2
 
-def get_win_rate(network1: PolicyValueNetwork, network2: PolicyValueNetwork, board_size: int, simulations: int, number_of_matches: int) -> tuple[float, float]:
+def get_win_rate(network1: PolicyValueNetwork, network2: PolicyValueNetwork, board_size: int,
+                 simulations: int, number_of_matches: int, mix1=ROOT_MIX, mix2=ROOT_MIX) -> tuple[float, float]:
  
     network1_wins = 0
     network2_wins = 0
@@ -36,7 +38,8 @@ def get_win_rate(network1: PolicyValueNetwork, network2: PolicyValueNetwork, boa
                 player = Board.current_player()
                 white_moves = (player == 1)
                 current_net = network1 if white_moves == net1_is_white else network2
-                mcts = MCTS(Board, simulations, current_net)
+                current_mix = mix1     if white_moves == net1_is_white else mix2
+                mcts = MCTS(Board, simulations, current_net, current_mix)
                 (pi, move) = mcts.search()
                 (row, col) = Board.index_to_cell(move)
                 moves.append(int(move))
