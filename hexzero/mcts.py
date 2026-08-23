@@ -1,12 +1,12 @@
 from __future__ import annotations
 from hexzero.board import HexBoard
 import math
-import copy
 import numpy as np
 import torch
 from hexzero.network import PolicyValueNetwork
 
-C_PARAM = 1.0
+C_PARAM  = 1.0
+ROOT_MIX = 0.4
 
 class Node:
     def __init__(self, board: HexBoard, prior: float = None, move: int = None, parent: Node = None):
@@ -38,10 +38,11 @@ class Node:
 
 
 class MCTS:
-    def __init__(self, board: HexBoard, number_of_simulations: int, network: PolicyValueNetwork):
+    def __init__(self, board: HexBoard, number_of_simulations: int, network: PolicyValueNetwork, root_mix: float = ROOT_MIX):
         self.root        = Node(board)
         self.simulations = number_of_simulations
         self.network     = network
+        self.root_mix    = root_mix
 
 
     def search(self) -> tuple[np.ndarray, int]:
@@ -100,6 +101,11 @@ class MCTS:
 
         policy_logits[~valid] = -torch.inf
         policy = torch.softmax(policy_logits, dim=0)
+
+        # uniform distribution
+        if node is self.root:
+            uniform = 1.0 / len(choices)
+            policy = policy * (1 - self.root_mix) + valid.float() * uniform * self.root_mix
         
         value_scalar = -value.item()
 
