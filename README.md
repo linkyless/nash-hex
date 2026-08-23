@@ -1,11 +1,11 @@
-[![Try the demo →](https://img.shields.io/badge/Try_the_demo_→-1a1a1a?style=for-the-badge&logo=huggingface&logoColor=white)](#)
+[![Play against it →](https://img.shields.io/badge/Play_against_it_→-1a1a1a?style=for-the-badge&logo=heroku&logoColor=white)](https://nash-hex-cf6e7dc1bd23.herokuapp.com/)
 [![Notes](https://img.shields.io/badge/Notes-obsidian-1a1a1a?style=for-the-badge&logo=obsidian&logoColor=white)](#)
 [![Python](https://img.shields.io/badge/Python-3.13-1a1a1a?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.x-1a1a1a?style=for-the-badge&logo=pytorch&logoColor=white)](https://pytorch.org/)
 
 # nash
 
-Nash plays Hex on a `5x5` board and it beats its own first iteration `97` games out of `100`. Nobody taught it anything beyond the rules, so there was no opening book for it to memorise and no evaluation function that I wrote by hand telling it which positions are good. It started from random weights, played `1500` games against itself, and everything it knows came out of that. You can play against it [here](#).
+Nash plays Hex on a `5x5` board. Nobody taught it anything beyond the rules, so there was no opening book for it to memorise and no evaluation function that I wrote by hand telling it which positions are good. It started from random weights, played `1500` games against itself, and everything it knows came out of that. It beats its own first iteration `75` games out of `100`, and somewhere along the way it worked out on its own that the centre of the board is the strongest opening, which is correct and which nobody told it. You can play against it [here](https://nash-hex-cf6e7dc1bd23.herokuapp.com/).
 
 The algorithm is AlphaZero, scaled down until it runs on a laptop. A **Monte Carlo tree search** chooses the move by walking down the game tree and keeping count of what it finds, and a **convolutional network** with two outputs guesses who is ahead and where to play, which the search consults every time it reaches a position it has not seen before. The reason any of this bootstraps from nothing is that the search always plays better than the network steering it, so the search can be used as a teacher, and a network that has learned from a better teacher then makes the next search better still.
 
@@ -47,7 +47,7 @@ With a network attached the random games disappear. When the search reaches an u
 
 $$Q(s,a) + c \cdot P(s,a) \cdot \frac{\sqrt{N(s)}}{1 + N(s,a)}$$
 
-Reading the shape rather than the symbols helps here. At $N(s,a) = 0$ the term $Q$ is empty and the prior is the only information in existence, so the prior decides alone. As visits accumulate the denominator grows and the prior's contribution decays as $O(1/N(s,a))$ while the empirical average takes over, so the intuition dissolves at the rate the search finds things out on its own. A network that was confidently wrong can therefore be overruled.
+Reading the shape rather than the symbols helps here. At $N(s,a) = 0$ the term $Q$ is empty and the prior is the only information in existence, so the prior decides alone. As visits accumulate the denominator grows and the prior's contribution decays as $O(1/N(s,a))$ while the empirical average takes over, so the intuition dissolves at the rate the search finds things out on its own. A network that was confidently wrong can therefore be overruled, at least in principle. There is a whole section further down about the day I found out that in practice it cannot.
 
 ## supervision without a dataset
 
@@ -71,37 +71,70 @@ with equality only when $p = \pi$. A flat policy over `25` cells has $H = \ln 25
 
 ![training losses](results/loss.png)
 
+## the failure that no test would have caught
+
+This is the interesting one, and there is no bug in it. Every line involved was doing exactly what it was written to do.
+
+I was playing against the engine and found a line that beat it every single time. Let it open, then fill the bottom row from left to right. It never blocked. Not once, across a dozen games, with a move available that would both break my chain and extend its own.
+
+Stranger still, the untrained network blocked it without any trouble.
+
+The overlay explains it. The search spends its simulations wherever the prior points, and the prior on the blocking cell was in the order of `0.005` while its favourite cells sat around `0.4`. Put that into PUCT against a child with $Q \approx 0.8$ and the blocking cell loses the comparison on every one of the `300` simulations. The search was not evaluating the block and rejecting it. **The search never looked at the cell at all**, and a single visit would have been enough, since the resulting `-1` propagates back up and collapses everything else.
+
+So the trained network had a hole precisely where it was confident, and the untrained one did not, because noise has no direction and spreads visits everywhere.
+
+Raising the exploration constant does nothing, since $c$ multiplies the prior and scaling `0.005` still leaves it nowhere. What fixes it is mixing the root priors with a flat distribution over the legal moves,
+
+$$\tilde{P}(a) = (1-\lambda)\,P(a) + \frac{\lambda}{|A|}$$
+
+which lifts the neglected cell from `0.005` to around `0.025` while barely touching the favourite. It is the deterministic cousin of the Dirichlet noise AlphaZero adds for exactly this reason.
+
+The threshold turned out to be sharp. At $\lambda = 0.33$ the engine still walked into the loss and at $\lambda = 0.34$ it blocked, which is what you would expect from a mechanism that is all or nothing, since one visit changes everything and zero visits change nothing.
+
+Retraining with $\lambda = 0.4$ in place during self play produced a network that blocks the line with the mixing switched back off, meaning it learned the pattern rather than being rescued by the search. Head to head, the new network beats the old one `58` games out of `100`.
+
+That number is worth sitting with. The old network won `97%` against a fresh one and the new one wins `75%`, and the new one is better. The old one had collapsed onto a narrow set of lines, which is devastating in a controlled tournament and leaves an opening a human finds in ten minutes.
+
 ## two sign errors
 
-I had two sign errors and neither of them crashed anything. What exposed them was putting a trained network up against a freshly initialised one and counting. `40%`.
+Earlier on there were also two ordinary bugs, and neither of them crashed anything either.
 
-Error #1: On the second player's turn the network is looking at a transposed board, so the policy it hands back is indexed in transposed coordinates, and I was reading it with indices taken from the real board. For half of every game the priors were scrambled, and a prior that is wrong in a consistent way does more damage than a random one, since the search will average noise out over enough visits and has no way to average out a systematic error.
+The first was in the canonical form. On the second player's turn the network is looking at a transposed board, so the policy it hands back is indexed in transposed coordinates, and I was reading it with indices taken from the real board. For half of every game the priors were scrambled.
 
-Error #2: A node stores its value from the point of view of whoever made the move that led to it, and the network hands back its value from the point of view of whoever moves next, and those are opposite people. Terminal nodes were unaffected, since they return a hardcoded $+1$, so the search kept finding mate in one perfectly well, and that is precisely why the first test I wrote reported the sign as correct and sent me looking somewhere else for a day.
+The second was in the backup. A node stores its value from the point of view of whoever made the move that led to it, and the network hands back its value from the point of view of whoever moves next, and those are opposite people. Terminal nodes were unaffected, since they return a hardcoded $+1$, so the search kept finding mate in one perfectly well, and that is precisely why the first test I wrote reported the sign as correct and sent me looking somewhere else for a day.
 
-The better the value head became at judging positions, the more consistently the search picked the wrong side of them. The untrained network was winning because its value output was noise, and noise at least has no direction to it. Haha, it was nice but frustrating.
+The better the value head became at judging positions, the more consistently the search picked the wrong side of them. The untrained network was winning because its value output was noise, and noise at least has no direction to it.
 
 ![before and after](results/milestones.png)
 
 ## measurements
 
-`30` iterations, `50` self-play games each, `200` simulations per move, `5` training passes per batch, Adam at `0.001`. A bit under `2h`, running entirely on CPU. Moving a network this small to the GPU buys nothing until the evaluations are batched, since the bottleneck is the tree search in interpreted Python.
+`30` iterations, `50` self-play games each, `200` simulations per move, `14` moves of temperature sampling, `5` training passes per batch, Adam at `0.001`, root mixing at $\lambda = 0.4$. A bit over `1h30` running entirely on CPU. Moving a network this small to the GPU buys nothing until the evaluations are batched, since the bottleneck is the tree search in interpreted Python.
 
-The final checkpoint beats the first one `97` games out of `100`, over `50` paired openings where each starting position is played twice with the colours swapped. Converting a win rate to a rating difference through
+Everything below is measured over paired openings, where each random starting position is played twice with the colours swapped so that neither side benefits from having drawn a lucky one.
+
+| matchup | games | result |
+|---|---|---|
+| final network against iteration `0` | `100` | `75%` |
+| final network against the pre-fix network | `100` | `58%` |
+| iteration `20` against the pre-fix network | `100` | `53%` |
+| root mixing on against root mixing off | `100` | `56%` |
+
+Converting a win rate to a rating difference through
 
 $$\Delta_{\text{elo}} = -400 \log_{10}\left(\frac{1}{p} - 1\right)$$
 
-puts that at roughly `600` Elo.
+puts the first row at roughly `477` Elo.
 
 ![elo](results/elo.png)
 
-The chained ladder in that figure adds up to more than `1100`, and the direct measurement is the one I trust. Elo is not transitive between engines, so measuring adjacent pairs and adding the differences accumulates error in a single direction. Each rung is `30` games, so any single step should be read as a tendency.
+Two caveats on that figure. The chained ladder adds up to `384`, which does not match the direct measurement, because Elo is not transitive between engines and adding differences between adjacent pairs accumulates error in one direction. And each rung is `30` games, which is small enough that the last three points are indistinguishable from each other. The curve is worth reading for its shape and not for any single step.
 
-That shape dips between iteration `10` and `15`, and the loss curves point at why. The value loss sits at almost exactly zero throughout that stretch, which sounds like the network having solved its problem and means the opposite. The self-play games had collapsed into near identical repetitions of one another, so predicting the winner had become trivial and there was nothing left in the data worth learning. Around iteration `21` the temperature sampling opens a different line and the ladder starts climbing again.
+The shape climbs hard until iteration `20` and then flattens. Without gating there is nothing stopping a bad iteration from propagating forward, which is the most obvious thing left undone.
 
 ![opening policies](results/openings.png)
 
-That is the visit distribution over an empty board, one panel per iteration, all normalised against the same peak. Iteration `0` spreads `200` simulations across `25` cells and learns almost nothing from any of them. By the end nearly all of them land on a single square. That concentration is what makes the search strong and it is also what starves the training data of variety.
+That is the visit distribution over an empty board, one panel per iteration, all normalised against the same peak. The cell it converges on is the centre, which in Hex is the strongest square on the board, since it sits equidistant from all four edges and takes part in more potential connections than any other. In serious play, opening in the centre is considered strong enough that it is the standard move to steal under the swap rule. Nobody put that in the code.
 
 ## structure
 
@@ -114,7 +147,7 @@ That is the visit distribution over an empty board, one panel per iteration, all
     │   ├── selfplay.py    # game generation and the training epoch
     │   ├── arena.py       # head to head matches with paired openings
     │   ├── visualize.py   # terminal heatmap of the opening policy
-    │   └── cli.py         # a random agent playing with the curr network
+    │   └── cli.py         # play against the current network in a terminal
     ├── scripts/
     │   ├── train.py       # the self-play loop which writes checkpoints and logs
     │   ├── ladder.py      # plays the checkpoints against each other
@@ -126,29 +159,30 @@ That is the visit distribution over an empty board, one panel per iteration, all
     └── results/
 
 Notes:
-- Win detection runs on union-find with `4` virtual nodes, one per edge. Every stone joins its neighbours of the same colour and any edge node it touches, so asking whether white has won amounts to asking whether the north and south nodes ended up in the same set. With path compression and union by size that is $O(\alpha(n))$ per query instead of a search over the board, which matters once the tree calls it hundreds of thousands of hundreds times.
+- Win detection runs on union-find with `4` virtual nodes, one per edge. Every stone joins its neighbours of the same colour and any edge node it touches, so asking whether white has won amounts to asking whether the north and south nodes ended up in the same set. With path compression and union by size that is $O(\alpha(n))$ per query instead of a search over the board, which matters once the tree calls it hundreds of thousands of times.
 - The first version that worked took `26s` to generate `5` games, and the profiler put `17` of those inside `copy.deepcopy`. Writing a `copy` method that knows there is exactly one array and two union-find structures to duplicate brought it down to `9.5s`. My guess about where the time was going, before I ran the profiler, was wrong.
-- The web version holds no session state.
+- The web version holds no session state. The browser keeps the list of moves and sends it with every request, and the server replays the game from scratch before answering.
 
 ## running it
 
     pip install -r requirements.txt
-    py -3.13 -m scripts.train              # a couple of hours, writes checkpoints/
+    py -3.13 -m scripts.train              # about an hour and a half, writes checkpoints/
     py -3.13 -m scripts.ladder             # plays the checkpoints against each other
     py -3.13 -m scripts.plots              # the plots
     py -3.13 -m uvicorn web.app:app        # you can play against it at localhost:8000
 
 ## what is missing
-Obviously, there's always something missing from projects like this, and above all, they form part of a conceptual framework which – as I’m bound to overlook something – I failed to pick up on.
-The following were the 'missing elements' after I'd analysed the overall picture dispassionately.
 
-- **Dirichlet noise** on the root priors during self-play, which is the standard mechanism against the policy collapsing onto one line and the thing that would most directly address the dip at iteration `12`.
-- **Gating**, so a new checkpoint replaces the current one only after clearing some threshold against it.
-- A **replay buffer** holding several iterations of games instead of only the most recent one. More than `8` moves of temperature sampling. 
-- After that, an **exact solver**. Hex on `5x5` is small enough to solve with alpha beta and memoisation over the same union-find, which would let the engine be measured against perfect play instead of against its own first iteration. Then batched network evaluation, and residual blocks, which three layers on `5x5` have no need for and `11x11` would.
+Every project like this has a set of things that were obvious in retrospect and invisible at the time. These are the ones I can see now.
+
+- **Gating**, so a new checkpoint replaces the current one only after clearing some threshold against it. The flattening after iteration `20` is what this would fix.
+- **Proper Dirichlet noise** instead of the flat mixing I ended up with. Flat mixing lifts the neglected cells, and random noise does that *and* pushes every self-play game in a different direction, which is a second benefit I am not getting.
+- A **replay buffer** holding several iterations of games instead of only the most recent one.
+- An **exact solver**. Hex on `5x5` is small enough to solve with alpha beta and memoisation over the same union-find, which would let the engine be measured against perfect play instead of against earlier versions of itself. Every number in this README is relative to something I also built, which is a weakness I know about and did not fix.
+- Then batched network evaluation, and residual blocks, which three layers on `5x5` have no need for and `11x11` would.
 
 ## where this came from
 
-For the tree search, the survey by Browne et al., *A Survey of Monte Carlo Tree Search Methods* (2012), and for UCB1 and the bandit framing underneath it, Auer, Cesa-Bianchi and Fischer. For the self-play loop and PUCT, Silver et al., *Mastering the game of Go without human knowledge* (2017). Piet Hein invented Hex in 1942, and John Nash later proved that the first player has a winning strategy using a strategy stealing argument. The engine is named after him.
+For the tree search, the survey by Browne et al., *A Survey of Monte Carlo Tree Search Methods* (2012), and for UCB1 and the bandit framing underneath it, Auer, Cesa-Bianchi and Fischer. For the self-play loop, PUCT and the Dirichlet noise that I should have read more carefully the first time, Silver et al., *Mastering the game of Go without human knowledge* (2017). Piet Hein invented Hex in 1942, and John Nash later proved that the first player has a winning strategy using a strategy stealing argument. The engine is named after him.
 
 A longer writeup in Spanish is on the way, structured as an Obsidian vault like the one I put together for [the neural network](https://linkyless.github.io/neural-network-notes). It will go [here](#) once it exists.
