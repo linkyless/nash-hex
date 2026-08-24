@@ -125,7 +125,7 @@ def play(request: PlayRequest) -> GameState:
 
     if board.winner is None and board.current_player() != human:
         start        = time.perf_counter()
-        mcts         = MCTS(board, simulations, network)
+        mcts         = MCTS(board, simulations, network, root_mix=0.0)
         pi, best     = mcts.search()
         elapsed_ms   = int((time.perf_counter() - start) * 1000)
 

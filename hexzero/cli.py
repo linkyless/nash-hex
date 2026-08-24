@@ -21,11 +21,11 @@ if __name__ == "__main__":
 
             Engine.print_board()
             player = Engine.current_player()       
-            if player == 1: 
+            if player == -1: 
                 row, col = map(int, input("Tu movimiento (fila columna): ").split())
                 Engine.place(row - 1, col - 1)
             else:
-                mcts = MCTS(Engine, 800, network)
+                mcts = MCTS(Engine, 800, network, root_mix=0.0)
                 (_, move) = mcts.search()
                 (row, col) = Engine.index_to_cell(move)
                 Engine.place(row, col)

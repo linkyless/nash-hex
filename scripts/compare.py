@@ -4,7 +4,7 @@ import torch
 import numpy as np
 import math
 
-NUMBER_OF_MATCHES = 25
+NUMBER_OF_MATCHES = 75
 SIMULATIONS       = 500
 NUMBER_OF_NETS    = 30
 STEP              = 5
