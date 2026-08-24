@@ -18,7 +18,7 @@ CHECKPOINT  = Path("checkpoints/iter_29.pt")
 STATIC_DIR  = Path(__file__).parent / "static"
 
 MIN_SIMULATIONS = 25
-MAX_SIMULATIONS = 800
+MAX_SIMULATIONS = 6000
 
 
 app     = FastAPI(title="Nash")
