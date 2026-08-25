@@ -23,3 +23,7 @@ logs/
 profile.txt
 *.csv
 !results/*.csv
+
+checkpoints/*.pt
+!checkpoints/iter_29.pt
+!checkpoints/iter_99.pt
