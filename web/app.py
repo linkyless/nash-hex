@@ -14,11 +14,11 @@ from hexzero.network import PolicyValueNetwork
 
 BOARD_SIZE  = 5
 TOTAL_CELLS = BOARD_SIZE * BOARD_SIZE
-CHECKPOINT  = Path("checkpoints/iter_29.pt")
+CHECKPOINT  = Path("checkpoints/iter_99.pt")
 STATIC_DIR  = Path(__file__).parent / "static"
 
 MIN_SIMULATIONS = 25
-MAX_SIMULATIONS = 6000
+MAX_SIMULATIONS = 2000
 
 
 app     = FastAPI(title="Nash")
@@ -31,7 +31,7 @@ class PlayRequest(BaseModel):
     moves:       list[int]  = Field(default_factory=list)
     move:        int | None = None
     human:       int        = 1
-    simulations: int        = 300
+    simulations: int        = 200
 
 
 class GameState(BaseModel):
