@@ -18,8 +18,13 @@ const VERD      = "#4f8f80";
 const VERD_LO   = "#33604f";
 const VERD_HI   = "#7fbfae";
 const BRASS     = "#c9a227";
+const BRASS_LO  = "#5a4514";
+const BRASS_HI  = "#f0d97a";
+const BRASS_DIM = "#3a2d0e";
 const HEAT_TOP  = [122, 102, 52];
 const HEAT_LOW  = [38, 34, 25];
+
+const NEIGHBOURS = [[0, 1], [0, -1], [-1, 0], [1, 0], [-1, 1], [1, -1]];
 
 const TONE_YOU  = 392;
 const TONE_NASH = 261;
@@ -72,6 +77,7 @@ const ctx     = canvas.getContext("2d", { alpha: false });
 const gauge   = document.getElementById("gauge");
 const verdict = document.getElementById("verdict");
 const gloss   = document.getElementById("gloss");
+const ledger  = document.getElementById("ledger");
 const gaugeYou  = document.getElementById("gaugeYou");
 const gaugeNash = document.getElementById("gaugeNash");
 const simsInput = document.getElementById("sims");
@@ -86,8 +92,10 @@ const lookup = new Int16Array(canvas.width * canvas.height).fill(-1);
 let state    = null;
 let overlay  = "off";
 let busy     = false;
-let lastSims = 300;
+let lastSims = 200;
 let popCell  = -1;
+let winPath  = [];
+let winLit   = 0;
 
 function hexX(row, col) {
   return ORIGIN_X + col * HEX_W + row * COL_SHIFT;
@@ -159,6 +167,69 @@ function buildLookup() {
   }
 }
 
+function cellName(index) {
+  return String.fromCharCode(97 + (index % SIZE)) + (Math.floor(index / SIZE) + 1);
+}
+
+/* shortest chain of the winner's stones from one home edge to the other with BFS*/
+function winningPath(grid, winner) {
+  const seen  = new Int8Array(CELLS);
+  const from  = new Int16Array(CELLS).fill(-1);
+  const queue = [];
+
+  for (let i = 0; i < SIZE; i++) {
+    const index = winner === 1 ? i : i * SIZE;
+    if (grid[index] === winner) {
+      seen[index] = 1;
+      queue.push(index);
+    }
+  }
+
+  while (queue.length) {
+    const index = queue.shift();
+    const row   = Math.floor(index / SIZE);
+    const col   = index % SIZE;
+
+    if ((winner === 1 && row === SIZE - 1) || (winner === -1 && col === SIZE - 1)) {
+      const path = [];
+      for (let step = index; step !== -1; step = from[step]) path.push(step);
+      return path.reverse();
+    }
+
+    for (const [dRow, dCol] of NEIGHBOURS) {
+      const r = row + dRow;
+      const c = col + dCol;
+      if (r < 0 || c < 0 || r >= SIZE || c >= SIZE) continue;
+      const next = r * SIZE + c;
+      if (seen[next] || grid[next] !== winner) continue;
+      seen[next] = 1;
+      from[next] = index;
+      queue.push(next);
+    }
+  }
+
+  return [];
+}
+
+function lightPath() {
+  if (winPath.length === 0) return;
+
+  if (calm) {
+    winLit = winPath.length;
+    paint();
+    return;
+  }
+
+  winLit = 0;
+  const step = () => {
+    winLit++;
+    paint();
+    blip(TONE_END * Math.pow(2, winLit / 12), 0.05, 0.03);
+    if (winLit < winPath.length) setTimeout(step, 110);
+  };
+  setTimeout(step, 240);
+}
+
 function drawEdges() {
   const side = HEX_H - 2 * SLOPE;
 
@@ -181,6 +252,7 @@ function render() {
 
   const weights = state ? (overlay === "search" ? state.search : overlay === "instinct" ? state.instinct : null) : null;
   const peak    = weights ? Math.max(...weights) : 0;
+  const lit     = new Set(winPath.slice(0, winLit));
 
   for (let index = 0; index < CELLS; index++) {
     const row = Math.floor(index / SIZE);
@@ -189,16 +261,21 @@ function render() {
     const y   = hexY(row);
     const own = state ? state.grid[index] : 0;
 
-    const framed = state && state.nash_move === index;
+    const glow   = lit.has(index);
+    const framed = glow || (state && state.nash_move === index);
     fillHex(x, y, framed ? BRASS : RULE, false);
 
     let fill = BOARD;
-    if (own === 0 && weights && peak > 0 && weights[index] > 0) {
+    if (glow) {
+      fill = BRASS_DIM;
+    } else if (own === 0 && weights && peak > 0 && weights[index] > 0) {
       fill = heatColor(weights[index] / peak);
     }
     fillHex(x, y, fill, true);
 
-    if (own === 1) {
+    if (glow) {
+      fillStone(x, y, BRASS, BRASS_HI, BRASS_LO, false);
+    } else if (own === 1) {
       fillStone(x, y, IVORY, IVORY_HI, IVORY_LO, popCell === index);
     } else if (own === -1) {
       fillStone(x, y, VERD, VERD_HI, VERD_LO, popCell === index);
@@ -258,10 +335,24 @@ function paintGloss() {
   }
 }
 
+function paintLedger() {
+  ledger.textContent = "";
+  if (!state) return;
+
+  state.moves.forEach((move, turn) => {
+    const item  = document.createElement("li");
+    const owner = turn % 2 === 0 ? 1 : -1;
+    item.textContent = cellName(move);
+    item.className   = owner === state.human ? "is-you" : "is-nash";
+    ledger.appendChild(item);
+  });
+}
+
 function paint() {
   render();
   paintStatus();
   paintGloss();
+  paintLedger();
   if (state) {
     paintGauge(state.evaluation, state.human);
     gaugeYou.style.color  = state.human === 1 ? IVORY : VERD;
@@ -273,16 +364,32 @@ async function send(move) {
   if (busy) return;
   busy = true;
   lastSims = Number(simsInput.value);
-  paintStatus();
+
+  const history = state ? state.moves.slice() : [];
+  const human   = state ? state.human : (firstInput.checked ? 1 : -1);
+
+  /* show the stone straight away, then reconcile with the server */
+  if (move !== null && state) {
+    state.grid[move] = human;
+    state.moves      = history.concat(move);
+    state.current    = -human;
+    state.nash_move  = null;
+    state.search     = new Array(CELLS).fill(0);
+    state.instinct   = new Array(CELLS).fill(0);
+    winPath = [];
+    winLit  = 0;
+  }
+
+  paint();
 
   try {
     const response = await fetch("/api/play", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        moves: state ? state.moves : [],
+        moves: history,
         move: move,
-        human: state ? state.human : (firstInput.checked ? 1 : -1),
+        human: human,
         simulations: lastSims,
       }),
     });
@@ -296,20 +403,28 @@ async function send(move) {
     const next   = await response.json();
     const landed = next.nash_move;
     state = next;
+    busy  = false;
 
     if (landed !== null) blip(TONE_NASH, 0.07, 0.06);
-    if (next.winner !== null) setTimeout(() => chime(next.winner === next.human), 160);
+
+    if (next.winner !== null) {
+      winPath = winningPath(next.grid, next.winner);
+      setTimeout(() => chime(next.winner === next.human), 160);
+    }
 
     if (landed !== null && !calm) {
       popCell = landed;
-      busy = false;
       paint();
-      setTimeout(() => { popCell = -1; paint(); }, 90);
+      setTimeout(() => {
+        popCell = -1;
+        paint();
+        if (next.winner !== null) lightPath();
+      }, 90);
       return;
     }
 
-    busy = false;
     paint();
+    if (next.winner !== null) lightPath();
   } catch (error) {
     busy = false;
     verdict.textContent = "the engine did not answer. try again";
@@ -317,8 +432,10 @@ async function send(move) {
 }
 
 function newGame() {
-  state = null;
+  state   = null;
   popCell = -1;
+  winPath = [];
+  winLit  = 0;
   const human = firstInput.checked ? 1 : -1;
   state = { moves: [], grid: new Array(CELLS).fill(0), legal: [], current: 1,
             winner: null, human: human, evaluation: 0, instinct: new Array(CELLS).fill(0),

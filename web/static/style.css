@@ -336,6 +336,35 @@ input[type="checkbox"]:focus-visible {
   outline-offset: 2px;
 }
 
+/* ledger */
+
+.ledger-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 calc(var(--step) * 1.25);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  min-height: 1.7em;
+}
+
+.ledger-list li {
+  color: var(--rule);
+  transition: color 300ms;
+}
+
+.ledger:hover .ledger-list li.is-you,
+.ledger:focus-within .ledger-list li.is-you {
+  color: var(--ivory);
+}
+
+.ledger:hover .ledger-list li.is-nash,
+.ledger:focus-within .ledger-list li.is-nash {
+  color: var(--verdigris);
+}
+
 /* colophon */
 
 .colophon {
@@ -354,5 +383,8 @@ input[type="checkbox"]:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .verdict.is-waiting::after {
     animation: none;
+  }
+  .ledger-list li {
+    transition: none;
   }
 }
