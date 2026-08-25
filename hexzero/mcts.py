@@ -7,6 +7,7 @@ from hexzero.network import PolicyValueNetwork
 
 C_PARAM  = 1.0
 ROOT_MIX = 0.4
+DIRICHLET_ALPHA = 1.0
 
 class Node:
     def __init__(self, board: HexBoard, prior: float = None, move: int = None, parent: Node = None):
@@ -102,10 +103,11 @@ class MCTS:
         policy_logits[~valid] = -torch.inf
         policy = torch.softmax(policy_logits, dim=0)
 
-        # uniform distribution
-        if node is self.root:
-            uniform = 1.0 / len(choices)
-            policy = policy * (1 - self.root_mix) + valid.float() * uniform * self.root_mix
+        # dirichlet noise
+        if node is self.root and self.root_mix > 0:
+            noise = np.random.dirichlet([DIRICHLET_ALPHA] * len(choices))
+            policy = policy.clone()
+            policy[choices] = policy[choices] * (1 - self.root_mix) + torch.from_numpy(noise).float() * self.root_mix
         
         value_scalar = -value.item()
 
