@@ -23,9 +23,10 @@ BUFFER_ITERATIONS = 10
 WORKERS       = os.cpu_count()
 
 CHECKPOINTS   = Path("checkpoints")
-LOG_FILE      = Path("training_log.csv")
-POLICY_LOG    = Path("opening_policies.csv")
-DIAG_FILE     = Path("policy_diagnostics.csv")
+RESULTS       = Path("results")
+LOG_FILE      = RESULTS / "training_log.csv"
+POLICY_LOG    = RESULTS / "opening_policies.csv"
+DIAG_FILE     = RESULTS / "policy_diagnostics.csv"
 
 
 def _play_one(state_dict):
@@ -39,6 +40,7 @@ def _play_one(state_dict):
 
 if __name__ == "__main__":
     CHECKPOINTS.mkdir(exist_ok=True)
+    RESULTS.mkdir(exist_ok=True)
 
     network   = PolicyValueNetwork(BOARD_SIZE)
     optimizer = torch.optim.Adam(network.parameters(), lr=LEARNING_RATE)
