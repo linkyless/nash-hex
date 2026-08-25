@@ -14,6 +14,10 @@ def get_examples_of_a_match(board_size: int, network: PolicyValueNetwork, simula
     Engine = HexBoard(board_size)
     total_cells = board_size * board_size
     count = 1
+    if np.random.rand() < 0.5:
+        for _ in range(np.random.randint(1, 3)):
+            Engine.place(*Engine.index_to_cell(int(np.random.choice(Engine.valid_choices()))))
+    
     while Engine.winner is None:
         MonteCarlo = MCTS(Engine, simulations, network)
         (pi, best_move) = MonteCarlo.search()
@@ -38,7 +42,13 @@ def get_examples_of_a_match(board_size: int, network: PolicyValueNetwork, simula
         final_examples.append((board, pi, mult))
         mult = -mult
 
-    return final_examples
+    # Same boards in 180º
+    augmented = []
+    for board, pi, z in final_examples:
+        augmented.append((board, pi, z))
+        augmented.append((board[::-1, ::-1].copy(), pi.reshape(board_size, board_size)[::-1, ::-1].reshape(-1).copy(), z))
+
+    return augmented
 
 
 def get_value_loss(winners: torch.Tensor, values: torch.Tensor):
