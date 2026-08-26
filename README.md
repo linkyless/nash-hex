@@ -1,5 +1,5 @@
 [![Play against it →](https://img.shields.io/badge/Play_against_it_→-1a1a1a?style=for-the-badge&logo=heroku&logoColor=white)](https://nash-hex-cf6e7dc1bd23.herokuapp.com/)
-[![Notes](https://img.shields.io/badge/Notes-obsidian-1a1a1a?style=for-the-badge&logo=obsidian&logoColor=white)](#)
+[![Notes](https://img.shields.io/badge/Notes-obsidian-1a1a1a?style=for-the-badge&logo=obsidian&logoColor=white)](https://linkyless.github.io/nash-hex-notes/)
 [![Python](https://img.shields.io/badge/Python-3.13-1a1a1a?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.x-1a1a1a?style=for-the-badge&logo=pytorch&logoColor=white)](https://pytorch.org/)
 
@@ -221,4 +221,4 @@ Notes:
 
 For the tree search, the survey by Browne et al., *A Survey of Monte Carlo Tree Search Methods* (2012), and for UCB1 and the bandit framing underneath it, Auer, Cesa-Bianchi and Fischer. For the self-play loop, PUCT and the Dirichlet noise that I should have read more carefully the first time, Silver et al., *Mastering the game of Go without human knowledge* (2017). For the hyperparameter sweep that convinced me outer iterations dominate everything inside them, Wang et al., *Hyper-Parameter Sweep on AlphaZero General* (2019), which also happens to run on `5x5` boards. Piet Hein invented Hex in 1942, and John Nash later proved that the first player has a winning strategy using a strategy stealing argument. The engine is named after him.
 
-A longer writeup in Spanish is on the way, structured as an Obsidian vault like the one I put together for [the neural network](https://linkyless.github.io/neural-network-notes). It will go [here](#) once it exists.
+A longer writeup in Spanish is on the way, structured as an Obsidian vault like the one I put together for [the neural network](https://linkyless.github.io/neural-network-notes). It will go [here](https://linkyless.github.io/nash-hex-notes/) once it exists.
